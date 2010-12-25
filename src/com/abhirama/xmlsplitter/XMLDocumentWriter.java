@@ -11,7 +11,6 @@ import org.codehaus.staxmate.SMOutputFactory;
 import org.codehaus.staxmate.out.SMOutputDocument;
 import org.codehaus.staxmate.out.SMOutputElement;
 
-import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -60,6 +59,14 @@ public class XMLDocumentWriter {
     this.xmlEventObserver = xmlEventObserver;
   }
 
+  public File getXmlFile() {
+    return xmlFile;
+  }
+
+  public void setXmlFile(File xmlFile) {
+    this.xmlFile = xmlFile;
+  }
+
   public void init() throws XMLStreamException {
     this.outputDocument = createNewOutputDocument();
   }
@@ -92,11 +99,11 @@ public class XMLDocumentWriter {
 
     if (xmlEvent.isEndElement()) {
       outputElements.pop();
-      xmlEventObserver.notifyElementEndEvent(this);
+      xmlEventObserver.notifyElementEndEvent(xmlEvent);
     }
 
     if (xmlEvent.isEndDocument()) {
-      xmlEventObserver.notifyDocumentEndEvent(this);
+      xmlEventObserver.notifyDocumentEndEvent(xmlEvent);
     }
   }
 
@@ -128,13 +135,13 @@ public class XMLDocumentWriter {
   }
 
   protected SMOutputElement writeElementTag(StartElement startElement, SMOutputDocument outputDocument) throws XMLStreamException {
-    String elementName = getNameFromQName(startElement.getName());
+    String elementName = Util.getNameFromQName(startElement.getName());
     SMOutputElement outputElement = outputDocument.addElement(elementName);
     return outputElement;
   }
 
   protected SMOutputElement writeElementTag(StartElement startElement, SMOutputElement outputElement) throws XMLStreamException {
-    String elementName = getNameFromQName(startElement.getName());
+    String elementName = Util.getNameFromQName(startElement.getName());
     SMOutputElement innerOutputElement = outputElement.addElement(elementName);
     return innerOutputElement;
   }
@@ -154,32 +161,15 @@ public class XMLDocumentWriter {
 
     while (attributeIterator.hasNext()) {
       Attribute attribute = ((Attribute) attributeIterator.next());
-      String attributeName = getNameFromQName(attribute.getName());
+      String attributeName = Util.getNameFromQName(attribute.getName());
       String attributeValue = attribute.getValue();
       outputElement.addAttribute(attributeName, attributeValue);
     }
   }
 
-  protected String getNameFromQName(QName qName) {
-    String elementName = "";
-
-    String prefix = qName.getPrefix();
-    String localPart = qName.getLocalPart();
-    if (isEmpty(prefix)) {
-      elementName = localPart;
-    } else {
-      elementName = prefix + ":" + localPart;
-    }
-
-    return elementName;
+  protected void flushOutput() throws XMLStreamException {
+    this.outputDocument.getContext().flushWriter();
   }
 
-  public static boolean isEmpty(String string) {
-    return string == null || string.equals("");
-  }
-
-  public static boolean isNotEmpty(String string) {
-    return !isEmpty(string);
-  }
 
 }

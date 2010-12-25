@@ -7,7 +7,9 @@
  */
 package com.abhirama.xmlsplitter;
 
+import javax.xml.stream.events.XMLEvent;
+
 public interface XMLEventObserver {
-  public void notifyElementEndEvent(XMLDocumentWriter xmlDocumentWriter);
-  public void notifyDocumentEndEvent(XMLDocumentWriter xmlDocumentWriter);
+  public void notifyElementEndEvent(XMLEvent xmlEvent);
+  public void notifyDocumentEndEvent(XMLEvent xmlEvent);
 }
