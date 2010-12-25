@@ -23,7 +23,7 @@ import java.io.FileNotFoundException;
 import java.util.Iterator;
 import java.util.Stack;
 
-public class XmlSplitter {
+public class XmlSplitter implements XMLEventObserver {
   protected File xmlFile;
   protected XMLEventReader xmlEventReader;
   protected StartElement documentRootElement;
@@ -56,15 +56,19 @@ public class XmlSplitter {
     xmlDocumentWriter.init();
     xmlDocumentWriter.setDocumentRootElement(this.documentRootElement);
     xmlDocumentWriter.setXmlEventReader(this.xmlEventReader);
-    xmlDocumentWriter.setXmlSplitter(this);
+    xmlDocumentWriter.setXmlEventObserver(this);
     xmlDocumentWriter.write();
   }
 
-  public void observeEndElementEvent(XMLDocumentWriter xmlDocumentWriter) {
+  public void notifyElementEndEvent(XMLDocumentWriter xmlDocumentWriter) {
   }
 
-  public void observeEndDocumentEvent(XMLDocumentWriter xmlDocumentWriter) throws XMLStreamException {
-    xmlDocumentWriter.close();
+  public void notifyDocumentEndEvent(XMLDocumentWriter xmlDocumentWriter) {
+    try {
+      xmlDocumentWriter.close();
+    } catch (XMLStreamException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   protected void assignDocumentRootElement() throws XMLStreamException {

@@ -24,9 +24,9 @@ public class XMLDocumentWriter {
   protected File xmlFile;
   protected StartElement documentRootElement;
   protected XMLEventReader xmlEventReader;
-  protected XmlSplitter xmlSplitter;
   protected SMOutputDocument outputDocument;
-  Stack<SMOutputElement> outputElements = new Stack<SMOutputElement>();
+  protected Stack<SMOutputElement> outputElements = new Stack<SMOutputElement>();
+  protected XMLEventObserver xmlEventObserver;
 
   public XMLDocumentWriter(File xmlFile) {
     this.xmlFile = xmlFile;
@@ -52,12 +52,12 @@ public class XMLDocumentWriter {
     this.xmlEventReader = xmlEventReader;
   }
 
-  public XmlSplitter getXmlSplitter() {
-    return xmlSplitter;
+  public XMLEventObserver getXmlEventObserver() {
+    return xmlEventObserver;
   }
 
-  public void setXmlSplitter(XmlSplitter xmlSplitter) {
-    this.xmlSplitter = xmlSplitter;
+  public void setXmlEventObserver(XMLEventObserver xmlEventObserver) {
+    this.xmlEventObserver = xmlEventObserver;
   }
 
   public void init() throws XMLStreamException {
@@ -91,12 +91,12 @@ public class XMLDocumentWriter {
     }
 
     if (xmlEvent.isEndElement()) {
-      xmlSplitter.observeEndElementEvent(this);
       outputElements.pop();
+      xmlEventObserver.notifyElementEndEvent(this);
     }
 
     if (xmlEvent.isEndDocument()) {
-      xmlSplitter.observeEndDocumentEvent(this);
+      xmlEventObserver.notifyDocumentEndEvent(this);
     }
   }
 
@@ -109,7 +109,7 @@ public class XMLDocumentWriter {
     return doc;
   }
 
-    protected SMOutputElement writeElement(StartElement startElement, SMOutputDocument outputDocument) throws XMLStreamException {
+  protected SMOutputElement writeElement(StartElement startElement, SMOutputDocument outputDocument) throws XMLStreamException {
     SMOutputElement outputElement = writeElementTag(startElement, outputDocument);
     opNameSpaces(startElement, outputElement);
     opAttributes(startElement, outputElement);
@@ -156,7 +156,7 @@ public class XMLDocumentWriter {
       Attribute attribute = ((Attribute) attributeIterator.next());
       String attributeName = getNameFromQName(attribute.getName());
       String attributeValue = attribute.getValue();
-      outputElement.addAttribute(attributeName,  attributeValue);
+      outputElement.addAttribute(attributeName, attributeValue);
     }
   }
 
