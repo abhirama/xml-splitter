@@ -10,15 +10,28 @@ package com.abhirama.xmlsplitter;
 import org.codehaus.staxmate.SMOutputFactory;
 import org.codehaus.staxmate.out.SMOutputDocument;
 import org.codehaus.staxmate.out.SMOutputElement;
+import org.xml.sax.SAXException;
+import org.w3c.dom.Document;
 
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.*;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.transform.Source;
+import javax.xml.validation.Validator;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.Stack;
 
@@ -32,6 +45,7 @@ public class XmlSplitter {
   protected Stack<SMOutputElement> outputElements = new Stack<SMOutputElement>();
   protected SMOutputDocument outputDocument;
   protected File currentXMLOPFile;
+  protected File schemaFile;
 
   protected int nodePositionCounter = 0;
 
@@ -59,11 +73,19 @@ public class XmlSplitter {
     this.splitFileDirectory = splitFileDirectory;
   }
 
+  public File getSchemaFile() {
+    return schemaFile;
+  }
+
+  public void setSchemaFile(File schemaFile) {
+    this.schemaFile = schemaFile;
+  }
+
   public void init() throws XMLStreamException, FileNotFoundException {
     xmlEventReader = XMLInputFactory.newInstance().createXMLEventReader(new FileInputStream(this.xmlFile));
   }
 
-  public void split() throws XMLStreamException {
+  public void split() throws XMLStreamException, IOException, SAXException, ParserConfigurationException {
     assignDocumentRootElement();
     assignCurrentXMLOPFile();
     assignCurrentOPDocument(currentXMLOPFile);
@@ -76,7 +98,7 @@ public class XmlSplitter {
     outputElements.push(outputRootElement);
   }
 
-  protected void processEvents() throws XMLStreamException {
+  protected void processEvents() throws XMLStreamException, IOException, SAXException, ParserConfigurationException {
     while (xmlEventReader.hasNext()) {
       XMLEvent xmlEvent = xmlEventReader.nextEvent();
       if (xmlEvent.isStartElement()) {
@@ -98,6 +120,7 @@ public class XmlSplitter {
 
           if (currentXMLOPFile.length() > this.expectedFileSize) {
             closeOpDocument();
+            validateSplitXmlDocument();
             outputElements.pop(); //we make this emty bcos we will be adding a new root element in the next step
             assignCurrentXMLOPFile();
             assignCurrentOPDocument(currentXMLOPFile);
@@ -109,6 +132,27 @@ public class XmlSplitter {
       if (xmlEvent.isEndDocument()) {
         closeOpDocument();
       }
+    }
+  }
+
+  protected void validateSplitXmlDocument() throws IOException, SAXException, ParserConfigurationException {
+    if (schemaFile != null) {
+      // parse an XML document into a DOM tree
+      DocumentBuilder parser = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+      Document document = parser.parse(this.currentXMLOPFile);
+
+      // create a SchemaFactory capable of understanding WXS schemas
+      SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+
+      // load a WXS schema, represented by a Schema instance
+      Source schemaStream = new StreamSource(schemaFile);
+      Schema schema = factory.newSchema(schemaStream);
+
+      // create a Validator instance, which can be used to validate an instance document
+      Validator validator = schema.newValidator();
+
+      // validate the DOM tree
+      validator.validate(new DOMSource(document));
     }
   }
 
@@ -199,12 +243,13 @@ public class XmlSplitter {
     return splitFileName;
   }
 
-  public static void main(String[] args) throws XMLStreamException, FileNotFoundException {
-    XmlSplitter xmlSplitter = new XmlSplitter("C:\\files\\DrugBank\\foo\\drugbank.xml");
+  public static void main(String[] args) throws XMLStreamException, IOException, SAXException, ParserConfigurationException {
+    XmlSplitter xmlSplitter = new XmlSplitter("C:\\files\\DrugBank\\drugbank.xml\\drugbank.xml");
     //XmlSplitter xmlSplitter = new XmlSplitter("files\\ipo.xml");
     //xmlSplitter.setExpectedFileSize(10000000);
     //xmlSplitter.setExpectedFileSize(1000);
     xmlSplitter.setExpectedFileSize(0);
+    xmlSplitter.setSchemaFile(new File("C:\\files\\DrugBank\\drugbank.xml\\drugbank.xsd"));
     xmlSplitter.setSplitFileDirectory(new File("C:\\files\\DrugBank\\foo"));
     xmlSplitter.init();
     xmlSplitter.split();
