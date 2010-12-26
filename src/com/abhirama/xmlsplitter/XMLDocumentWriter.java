@@ -90,6 +90,7 @@ public class XMLDocumentWriter {
       StartElement startElement = xmlEvent.asStartElement();
       SMOutputElement outputRootElement = writeElement(startElement, outputElements.peek());
       outputElements.push(outputRootElement);
+      xmlEventObserver.notifyElementStartEvent(xmlEvent);
     }
 
     if (xmlEvent.isCharacters()) {
@@ -105,11 +106,25 @@ public class XMLDocumentWriter {
     if (xmlEvent.isEndDocument()) {
       xmlEventObserver.notifyDocumentEndEvent(xmlEvent);
     }
+
+    //todo - remove
+    this.flushOutput();
   }
 
+  static int count = 0;
   public SMOutputDocument createNewOutputDocument() throws XMLStreamException {
-    SMOutputFactory outf = new SMOutputFactory(XMLOutputFactory.newInstance());
+    System.out.println("No of docs created:" + ++count);
+
+    if (count == 717) {
+      int i = 10;  
+    }
+
+    XMLOutputFactory xmlOutputFactory = XMLOutputFactory.newInstance();
+    System.out.println("Created xml output factory");
+    SMOutputFactory outf = new SMOutputFactory(xmlOutputFactory);
+    System.out.println("Created outf");
     SMOutputDocument doc = outf.createOutputDocument(this.xmlFile);
+    System.out.println("Initlized file");
 
     // (optional) 3: enable indentation (note spaces after backslash!)
     doc.setIndentation("\n  ", 1, 1);

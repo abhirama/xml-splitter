@@ -14,13 +14,11 @@ import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.events.EndElement;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.Stack;
 
 public class XmlSplitter implements XMLEventObserver {
   protected File xmlFile;
@@ -28,6 +26,10 @@ public class XmlSplitter implements XMLEventObserver {
   protected StartElement documentRootElement;
   protected XMLDocumentWriter xmlDocumentWriter;
   protected long expectedFileSize; //in bytes
+  protected int fileCounter = 0;
+  protected File splitFileDirectory;
+
+  protected int nodePositionCounter = 0;
 
   public XmlSplitter(File xmlFile) {
     this.xmlFile = xmlFile;
@@ -45,6 +47,14 @@ public class XmlSplitter implements XMLEventObserver {
     this.expectedFileSize = expectedFileSize;
   }
 
+  public File getSplitFileDirectory() {
+    return splitFileDirectory;
+  }
+
+  public void setSplitFileDirectory(File splitFileDirectory) {
+    this.splitFileDirectory = splitFileDirectory;
+  }
+
   public void init() throws XMLStreamException, FileNotFoundException {
     xmlEventReader = XMLInputFactory.newInstance().createXMLEventReader(new FileInputStream(this.xmlFile));
   }
@@ -58,52 +68,83 @@ public class XmlSplitter implements XMLEventObserver {
     return doc;
   }
 
-  protected Stack<String> elementName = new Stack<String>();
-
   public void split() throws XMLStreamException {
     assignDocumentRootElement();
     splitHelper();
   }
 
+  static int bar = 0;
   protected void splitHelper() throws XMLStreamException {
-    XMLEvent xmlEvent = loopUntilStartElement();
-    elementName.push(Util.getNameFromQName(xmlEvent.asStartElement().getName()));
+    loopUntilStartElement();
+    System.out.println("Creating doc writer");
     initializeXmlDocumentWriter();
+    System.out.println("Done creating doc writer");
+    fileCounter++;
+    System.out.println("Started to write");
+    System.out.println("--------" + ++bar);
     xmlDocumentWriter.write();
   }
 
   protected void initializeXmlDocumentWriter() throws XMLStreamException {
-    xmlDocumentWriter = new XMLDocumentWriter(new File(System.currentTimeMillis() + ".xml"));
+    xmlDocumentWriter = new XMLDocumentWriter(getSplitFile());
+    System.out.println("Initializing doc writer");
     xmlDocumentWriter.init();
+    System.out.println("Done initializing doc writer");
     xmlDocumentWriter.setDocumentRootElement(this.documentRootElement);
     xmlDocumentWriter.setXmlEventReader(this.xmlEventReader);
     xmlDocumentWriter.setXmlEventObserver(this);
   }
 
-  protected XMLEvent loopUntilStartElement() throws XMLStreamException {
-    XMLEvent xmlEvent = this.xmlEventReader.peek();
+  protected File getSplitFile() {
+    return new File(splitFileDirectory, getSplitFileName());
+  }
 
+  protected String getSplitFileName() {
+    String locXmlFileName = this.xmlFile.getName();
+    String splitFileName = locXmlFileName.substring(0, locXmlFileName.lastIndexOf(".")) + "_" + fileCounter + ".xml";
+    System.out.println(splitFileName);
+    return splitFileName;
+  }
+
+  protected void loopUntilStartElement() throws XMLStreamException {
+    XMLEvent xmlEvent = xmlEventReader.peek();
+
+    System.out.println("<>");
     while (!xmlEvent.isStartElement()) {
-      if (xmlEvent.isEndDocument()) {
+      System.out.println("looping");
+      if (xmlEvent.isEndDocument() || !xmlEventReader.hasNext()) {
+        System.out.println("End reached - 1");
+        System.out.println("Document ends:" + xmlEvent.isEndDocument());
         System.exit(0);
       }
 
       this.xmlEventReader.nextEvent();
       xmlEvent = xmlEventReader.peek();
     }
-    return xmlEvent;
+    System.out.println("</>");
   }
 
-  public void notifyElementEndEvent(XMLEvent xmlEvent) {
-    try {
-      EndElement endElement = xmlEvent.asEndElement();
+  public void notifyElementStartEvent(XMLEvent xmlEvent) {
+    nodePositionCounter++;
+  }
 
-      if (elementName.peek().equals(Util.getNameFromQName(endElement.getName()))) {
+  int foo = 0;
+
+  public void notifyElementEndEvent(XMLEvent xmlEvent) {
+   if (foo == 251818) {
+     int k = 0;  
+   }
+
+    //System.out.println(++foo);
+
+    nodePositionCounter--;
+    try {
+      if (nodePositionCounter == 0) {
         xmlDocumentWriter.flushOutput();
 
         if (xmlDocumentWriter.getXmlFile().length() > this.expectedFileSize) {
-          elementName.pop();
           xmlDocumentWriter.close();
+          System.out.println(xmlEvent.asEndElement().getName().getLocalPart()); //todo has to be removed
           splitHelper();
         }
       }
@@ -113,6 +154,7 @@ public class XmlSplitter implements XMLEventObserver {
   }
 
   public void notifyDocumentEndEvent(XMLEvent xmlEvent) {
+    System.out.println("End reached - 0");
     try {
       xmlDocumentWriter.close();
     } catch (XMLStreamException e) {
@@ -131,8 +173,12 @@ public class XmlSplitter implements XMLEventObserver {
   }
 
   public static void main(String[] args) throws XMLStreamException, FileNotFoundException {
-    XmlSplitter xmlSplitter = new XmlSplitter("files\\ipo.xml");
-    xmlSplitter.setExpectedFileSize(1000);
+    XmlSplitter xmlSplitter = new XmlSplitter("C:\\files\\DrugBank\\foo\\drugbank.xml");
+    //XmlSplitter xmlSplitter = new XmlSplitter("files\\ipo.xml");
+    //xmlSplitter.setExpectedFileSize(10000000);
+    //xmlSplitter.setExpectedFileSize(1000);
+    xmlSplitter.setExpectedFileSize(0);
+    xmlSplitter.setSplitFileDirectory(new File("C:\\files\\DrugBank\\foo"));
     xmlSplitter.init();
     xmlSplitter.split();
   }
