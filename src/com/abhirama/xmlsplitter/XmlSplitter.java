@@ -93,6 +93,19 @@ public class XmlSplitter {
     processEvents();
   }
 
+  protected void loopUntilStartElement() throws XMLStreamException {
+    XMLEvent xmlEvent = xmlEventReader.peek();
+
+    while (!xmlEvent.isStartElement()) {
+      if (xmlEvent.isEndDocument() || !xmlEventReader.hasNext()) {
+        System.exit(0);
+      }
+
+      this.xmlEventReader.nextEvent();
+      xmlEvent = xmlEventReader.peek();
+    }
+  }
+
   protected void opDocumentRootElement() throws XMLStreamException {
     SMOutputElement outputRootElement = opElement(documentRootElement, outputDocument);
     outputElements.push(outputRootElement);
@@ -122,6 +135,7 @@ public class XmlSplitter {
             closeOpDocument();
             validateSplitXmlDocument();
             outputElements.pop(); //we make this emty bcos we will be adding a new root element in the next step
+            loopUntilStartElement(); //we do this so that empty xml file is not created if we have reached the end of the doc
             assignCurrentXMLOPFile();
             assignCurrentOPDocument(currentXMLOPFile);
             opDocumentRootElement();
@@ -249,7 +263,7 @@ public class XmlSplitter {
     //xmlSplitter.setExpectedFileSize(10000000);
     //xmlSplitter.setExpectedFileSize(1000);
     xmlSplitter.setExpectedFileSize(0);
-    xmlSplitter.setSchemaFile(new File("C:\\files\\DrugBank\\drugbank.xml\\drugbank.xsd"));
+    //xmlSplitter.setSchemaFile(new File("C:\\files\\DrugBank\\drugbank.xml\\drugbank.xsd"));
     xmlSplitter.setSplitFileDirectory(new File("C:\\files\\DrugBank\\foo"));
     xmlSplitter.init();
     xmlSplitter.split();
