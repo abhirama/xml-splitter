@@ -1,2 +1,1 @@
-xml-splitter
-============
+Splits a huge xml file into multiple well formed xml files.
