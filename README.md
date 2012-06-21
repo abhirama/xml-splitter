@@ -1,1 +1,1 @@
-Splits a huge xml file into multiple well formed xml files.
+A java utility to split a huge xml file into multiple well formed xml files.
